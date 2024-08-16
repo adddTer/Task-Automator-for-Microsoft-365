@@ -1,0 +1,61 @@
+{
+  "inputs": {
+    "method": "get",
+    "uri": "https://graph.microsoft.com/v1.0/sites/{site-id}/lists/{list-id}/items"
+  },
+  "actions": [
+    {
+      "runAfter": {},
+      "type": "ParseJson",
+      "inputs": {
+        "content": "@body('HTTP')",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "assignee": { "type": "string" },
+                  "status": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "runAfter": {
+        "ParseJson": ["Succeeded"]
+      },
+      "type": "Condition",
+      "inputs": {
+        "if": {
+          "and": [
+            {
+              "equals": [
+                "@items('ParseJson')?['status']",
+                "Not Started"
+              ]
+            }
+          ]
+        },
+        "actions": [
+          {
+            "type": "Http",
+            "inputs": {
+              "method": "post",
+              "uri": "https://graph.microsoft.com/v1.0/teams/{team-id}/channels/{channel-id}/messages",
+              "body": {
+                "content": "A new task has been assigned to you: @items('ParseJson')?['title']"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
